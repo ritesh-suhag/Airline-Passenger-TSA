@@ -156,6 +156,7 @@ def airline_page():
     # Showing the best model according to all cities - 
     forecast_col1, forecast_col2, forecast_col3 = st.beta_columns((1,1.5, 1))
     get_forecast(temp, forecast_col2)
+    
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ USER PAGE
 
 def load_data(input_preference, col):
@@ -264,10 +265,9 @@ def user_page():
             else:
                 col2.info("Select the column for Time Series Analysis")
             
-            
-            
     else:
         st.info('Awaiting input file. (Use Input file select box in the sidebar to input a file)')
+    
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ MAIN PAGE
 
