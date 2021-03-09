@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import seaborn as sns
 import streamlit as st
 from PIL import Image
@@ -52,7 +53,9 @@ def plot_boxplots(df, tsa_column, box_col1, box_col2):
     fig, axes = plt.subplots(1, 1, figsize=(10,7), dpi= 80)
     sns.boxplot(x='year', y='Passenger_Trips', data=temp,
                 ax=axes)
-    axes.set_title('Year-wise Box Plot\n(The Trend)', fontsize=18); 
+    axes.set_title('Year-wise Box Plot\n(The Trend)', fontsize=18)
+    axes.yaxis.set_major_formatter(ticker.EngFormatter())
+    plt.xticks(rotation=90)
     
     box_col1.pyplot()
     
@@ -61,6 +64,7 @@ def plot_boxplots(df, tsa_column, box_col1, box_col2):
     fig, axes = plt.subplots(1, 1, figsize=(10,7), dpi= 80)
     sns.boxplot(x='month', y='Passenger_Trips', data=temp)
     axes.set_title('Month-wise Box Plot\n(The Seasonality)', fontsize=18)
+    axes.yaxis.set_major_formatter(ticker.EngFormatter()) 
     box_col2.pyplot()
 
 def get_forecast(df, forecast_col2):
@@ -76,11 +80,14 @@ def get_forecast(df, forecast_col2):
     df.loc['2015':]['Passenger_Trips'].plot(ax=ax)
     fcast['mean'].plot(ax=ax, style='k--')
     ax.fill_between(fcast.index, fcast['mean_ci_lower'], fcast['mean_ci_upper'], color='k', alpha=0.1)
+    ax.yaxis.set_major_formatter(ticker.EngFormatter())
     forecast_col2.pyplot()
     
+    fig, ax = plt.subplots(figsize=(15, 5))
     plt.plot(df[df.index.to_series().between('2019-01-01', '2019-12-01')]['Passenger_Trips'], color='green')
     plt.plot(np.exp(results.predict(start='2019-01-01', end='2019-12-01')), color='red')
     plt.title('Comparison of Actual and Predicted data')
+    ax.yaxis.set_major_formatter(ticker.EngFormatter())
     plt.xticks(rotation=90)
     forecast_col2.pyplot()
 
