@@ -8,6 +8,7 @@ import seaborn as sns
 import streamlit as st
 from PIL import Image
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+from scipy.interpolate import interp1d
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ HOME PAGE
 
@@ -42,6 +43,18 @@ def get_city_data(data, tsa_column):
     else:
         return data
 
+# KNN interpolation
+def knn_mean(ts, n):
+    out = np.copy(ts)
+    for i, val in enumerate(ts):
+        if np.isnan(val):
+            n_by_2 = np.ceil(n/2)
+            lower = np.max([0, int(i-n_by_2)])
+            upper = np.min([len(ts)+1, int(i+n_by_2)])
+            ts_near = np.concatenate([ts[lower:i], ts[i:upper]])
+            out[i] = np.nanmean(ts_near)
+    return out
+
 def plot_boxplots(df, tsa_column, box_col1, box_col2):
     total_passengers = df.groupby([df.index]).agg({"Passenger_Trips" : "sum"})
     
@@ -71,6 +84,7 @@ def get_forecast(df, forecast_col2):
     
     df = df.groupby([df.index]).agg({"Passenger_Trips" : "sum"})
     df = df.dropna()
+    #df['Passenger_Trips'] = knn_mean(df['Passenger_Trips'], 6)
     
     model = SARIMAX(np.log(df["Passenger_Trips"]), order = (2,1,1), seasonal_order = (0, 1, 1, 12))
     results = model.fit()
@@ -180,6 +194,42 @@ def load_data(input_preference, col):
         return input_df, user_data
     except:
         pass
+
+# Plot pacf and acf plots
+def plot_autocorrelation(df, n):
+    plot_acf(df.diff(n).dropna(), lags=25, zero=False)
+    plot_pacf(df.diff(n).dropna(),  lags=25, zero=False)
+    
+def adfuller(df):
+    print(adfuller(df.diff(i).dropna())[1])
+    
+# Hyperparameter tuning
+    
+def hyperparameter_tuning(p_range=3, q_range=3, P_range=3, Q_range=3, d=1, S):
+    order_aic_bic = []
+    # Loop over p values from 0-2
+    for p in range(p_range):
+        # Loop over q values from 0-2
+        for q in range(q_range):
+            for P in range(P_range):
+                for Q in range(Q_range):
+                    try:
+                        
+                        #create and fit ARMA(p,q) model
+                        model = SARIMAX(np.log(airline_pt['Passenger_Trips']), order=(p,d,q), seasonal_order=(P,d,Q,S))
+                        results = model.fit()
+                        
+                        # Append order and results tuple
+                        order_aic_bic.append((p,q,P, Q, results.aic, results.bic))
+                    except:
+                        order_aic_bic.append((p,q,P,Q,None, None))
+      
+
+    # Construct DataFrame from order_aic_bic
+    order_df = pd.DataFrame(order_aic_bic, 
+                        columns=['p', 'q', 'P', 'Q', 'AIC', 'BIC'])
+    order_df = order_df.sort_values('AIC').reset_index(drop=True)
+
 
 def user_page():
     st.title("User Basic Page")
