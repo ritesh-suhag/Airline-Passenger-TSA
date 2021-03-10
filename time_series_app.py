@@ -8,6 +8,7 @@ import seaborn as sns
 import streamlit as st
 from PIL import Image
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+from scipy.interpolate import interp1d
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ HOME PAGE
 
@@ -42,6 +43,18 @@ def get_city_data(data, tsa_column):
     else:
         return data
 
+# KNN interpolation
+def knn_mean(ts, n):
+    out = np.copy(ts)
+    for i, val in enumerate(ts):
+        if np.isnan(val):
+            n_by_2 = np.ceil(n/2)
+            lower = np.max([0, int(i-n_by_2)])
+            upper = np.min([len(ts)+1, int(i+n_by_2)])
+            ts_near = np.concatenate([ts[lower:i], ts[i:upper]])
+            out[i] = np.nanmean(ts_near)
+    return out
+
 def plot_boxplots(df, tsa_column, box_col1, box_col2):
     total_passengers = df.groupby([df.index]).agg({"Passenger_Trips" : "sum"})
     
@@ -53,9 +66,11 @@ def plot_boxplots(df, tsa_column, box_col1, box_col2):
     fig, axes = plt.subplots(1, 1, figsize=(10,7), dpi= 80)
     sns.boxplot(x='year', y='Passenger_Trips', data=temp,
                 ax=axes)
-    axes.set_title('Year-wise Box Plot\n(The Trend)', fontsize=18)
+    axes.set_ylabel('Number of Passengers')
+    axes.set_xlabel('Year')
+    axes.set_title('Box Plot for every Year', fontsize=18)
     axes.yaxis.set_major_formatter(ticker.EngFormatter())
-    plt.xticks(rotation=90)
+    plt.xticks(rotation=60)
     
     box_col1.pyplot()
     
@@ -63,7 +78,9 @@ def plot_boxplots(df, tsa_column, box_col1, box_col2):
     temp = total_passengers["2016":"2019"]
     fig, axes = plt.subplots(1, 1, figsize=(10,7), dpi= 80)
     sns.boxplot(x='month', y='Passenger_Trips', data=temp)
-    axes.set_title('Month-wise Box Plot\n(The Seasonality)', fontsize=18)
+    axes.set_title('Box Plot for every Month', fontsize=18)
+    axes.set_ylabel('Number of Passengers')
+    axes.set_xlabel('Month')
     axes.yaxis.set_major_formatter(ticker.EngFormatter()) 
     box_col2.pyplot()
 
@@ -71,6 +88,7 @@ def get_forecast(df, forecast_col2):
     
     df = df.groupby([df.index]).agg({"Passenger_Trips" : "sum"})
     df = df.dropna()
+    #df['Passenger_Trips'] = knn_mean(df['Passenger_Trips'], 6)
     
     model = SARIMAX(np.log(df["Passenger_Trips"]), order = (2,1,1), seasonal_order = (0, 1, 1, 12))
     results = model.fit()
@@ -80,15 +98,19 @@ def get_forecast(df, forecast_col2):
     df.loc['2015':]['Passenger_Trips'].plot(ax=ax)
     fcast['mean'].plot(ax=ax, style='k--')
     ax.fill_between(fcast.index, fcast['mean_ci_lower'], fcast['mean_ci_upper'], color='k', alpha=0.1)
+    ax.set_xlabel('Year', fontsize=12)
+    ax.set_ylabel('Number of Passengers', fontsize=12)
+    plt.title('Prediction of Future Data', fontsize=18)
     ax.yaxis.set_major_formatter(ticker.EngFormatter())
     forecast_col2.pyplot()
     
     fig, ax = plt.subplots(figsize=(15, 5))
     plt.plot(df[df.index.to_series().between('2019-01-01', '2019-12-01')]['Passenger_Trips'], color='green')
     plt.plot(np.exp(results.predict(start='2019-01-01', end='2019-12-01')), color='red')
-    plt.title('Comparison of Actual and Predicted data')
+    plt.title('Comparison of Actual and Predicted data', fontsize=18)
+    ax.set_ylabel('Number of Passengers', fontsize=12)
     ax.yaxis.set_major_formatter(ticker.EngFormatter())
-    plt.xticks(rotation=90)
+    #plt.xticks(rotation=70)
     forecast_col2.pyplot()
 
 
@@ -266,7 +288,46 @@ def get_mutiple_cols(df, col1, col2):
     return selected_columns
     
 
+<<<<<<< HEAD
        
+=======
+# Plot pacf and acf plots
+def plot_autocorrelation(df, n):
+    plot_acf(df.diff(n).dropna(), lags=25, zero=False)
+    plot_pacf(df.diff(n).dropna(),  lags=25, zero=False)
+    
+def adfuller(df):
+    print(adfuller(df.diff(i).dropna())[1])
+    
+# Hyperparameter tuning
+    
+def hyperparameter_tuning(S, p_range=3, q_range=3, P_range=3, Q_range=3, d=1):
+    order_aic_bic = []
+    # Loop over p values from 0-2
+    for p in range(p_range):
+        # Loop over q values from 0-2
+        for q in range(q_range):
+            for P in range(P_range):
+                for Q in range(Q_range):
+                    try:
+                        
+                        #create and fit ARMA(p,q) model
+                        model = SARIMAX(np.log(airline_pt['Passenger_Trips']), order=(p,d,q), seasonal_order=(P,d,Q,S))
+                        results = model.fit()
+                        
+                        # Append order and results tuple
+                        order_aic_bic.append((p,q,P, Q, results.aic, results.bic))
+                    except:
+                        order_aic_bic.append((p,q,P,Q,None, None))
+      
+
+    # Construct DataFrame from order_aic_bic
+    order_df = pd.DataFrame(order_aic_bic, 
+                        columns=['p', 'q', 'P', 'Q', 'AIC', 'BIC'])
+    order_df = order_df.sort_values('AIC').reset_index(drop=True)
+
+
+>>>>>>> 364edb50b4e80f2addcddaf137cf7ed7a52ea1bb
 def user_page():
     st.title("User Basic Page")
     st.write(" ")
