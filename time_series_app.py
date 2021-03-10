@@ -288,9 +288,6 @@ def get_mutiple_cols(df, col1, col2):
     return selected_columns
     
 
-<<<<<<< HEAD
-       
-=======
 # Plot pacf and acf plots
 def plot_autocorrelation(df, n):
     plot_acf(df.diff(n).dropna(), lags=25, zero=False)
@@ -326,8 +323,6 @@ def hyperparameter_tuning(S, p_range=3, q_range=3, P_range=3, Q_range=3, d=1):
                         columns=['p', 'q', 'P', 'Q', 'AIC', 'BIC'])
     order_df = order_df.sort_values('AIC').reset_index(drop=True)
 
-
->>>>>>> 364edb50b4e80f2addcddaf137cf7ed7a52ea1bb
 def user_page():
     st.title("User Basic Page")
     st.write(" ")
