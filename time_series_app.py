@@ -88,10 +88,11 @@ def get_forecast(df, forecast_col2):
     
     df = df.groupby([df.index]).agg({"Passenger_Trips" : "sum"})
     df = df.dropna()
+    df['Passenger_Trips'] = df['Passenger_Trips'].astype(float)
     #df['Passenger_Trips'] = knn_mean(df['Passenger_Trips'], 6)
     
     model = SARIMAX(np.log(df["Passenger_Trips"]), order = (2,1,1), seasonal_order = (0, 1, 1, 12))
-    results = model.fit()
+    results = model.fit(start_ar_lags = None)
     
     fcast = np.exp(results.get_forecast('2021-09').summary_frame())
     fig, ax = plt.subplots(figsize=(15, 5))
