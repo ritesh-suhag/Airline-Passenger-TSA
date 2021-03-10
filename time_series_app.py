@@ -189,20 +189,105 @@ def airline_page():
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ USER PAGE
 
-def load_data(input_preference, col):
+def get_user_data():
+    st.sidebar.write('---')
+    # Select Box to ask for input - 
+    input_preference = st.sidebar.selectbox("Input file", ["~ Select ~", "Input from Computer", "Use Example file"])
     user_data = 2
-    try:
-        if input_preference == "Input from Computer":
-            uploaded_file = col.file_uploader('Upload your input CSV file', type = ['csv'])
-            if uploaded_file is not None:
-                input_df = pd.read_csv(uploaded_file)
-                user_data = 1
-        elif input_preference == "Use Example file":
-            input_df = pd.read_csv('dom_citypairs_web.csv')
-            user_data = 0
-        return input_df, user_data
-    except:
+    if input_preference == "Input from Computer":
+        uploaded_file = st.sidebar.file_uploader('Upload your input CSV file', type = ['csv'])
+        if uploaded_file is not None:
+            df = pd.read_csv(uploaded_file)
+            user_data = 1
+    elif input_preference == "Use Example file":
+        df = pd.read_csv('dom_citypairs_web.csv')
+        user_data = 0
+    return input_preference, user_data, df
+
+def get_tsa_column(user_data, df, col2):
+    if user_data == 1:
+        col_options = ['~ Select a column ~']
+        df_columns = list(df.columns)
+        col_options = col_options + df_columns
+        tsa_column = col2.selectbox('Choose the column containing time-series data', col_options, index = 0)
+    elif user_data == 0:
+        tsa_column = col2.selectbox('Choose the column containing time-series data', ['Passenger_Trips', 'Aircraft_Trips', 'Seats'], index = 0)
+        col2. write("""
+                    ** We will be doing Time-Series Analysis on the 'Passenger_Trips' column.**
+                    """)
+    return tsa_column
+
+def get_time_col_pref(user_data, col2):
+    if user_data == 1:
+        time_col_pref = col2.selectbox('Time data is available in - ', ['~ Select ~', 'Single column', 'Multiple columns'], index = 0)
+    elif user_data == 0:
+        time_col_pref = col2.selectbox('Time data is available in - ', ['Multiple columns'], index = 0)
+        col2. write("""
+                    ** In the input file we have time data in different columns.**
+                    """)
+    return time_col_pref
+
+def get_date_time(time_col_pref, df, user_data_temp):
+    if time_col_pref == 'Single column':
+        col1, col2 = st.beta_columns((1,1))
+        date_freq = get_date_freq(user_data_temp, df, col1)
+        date_columns = get_single_date_col(df, col2)
+    elif time_col_pref == 'Multiple columns':
+        col1, col2, col3 = st.beta_columns((1,2,1))
+        date_freq = get_date_freq(user_data_temp, df, col2)
+        col1, col2 = st.beta_columns((1,1))
+        date_columns = get_mutiple_cols(df, col1, col2)
+    check = 1
+    for col in date_columns:
+        if col == '~ Select a column ~':
+            check = 0
+    if check == 1 and date_columns != []:    
         pass
+    else:
+        col1, col2, col3 = st.beta_columns((1,1,1))
+        col2.info('Select the date/time columns')
+    return date_freq, date_columns
+
+def get_date_freq(user_data, df, col):
+    # Getting the frequency - 
+    date_freq = col.selectbox('Choose the frequency of date time - ', ['Daily','Monthly', 'Yearly'])
+    return date_freq
+
+def get_single_date_col(df, col):
+    # Getting the date column - 
+    col_options = ['~ Select a column ~']
+    df_columns = list(df.columns)
+    col_options = col_options + df_columns
+    date_column = col.selectbox('Choose the column containing the date column', col_options, index = 0)
+    date_column = [date_column]
+    return date_column
+
+def get_time_cols(user_time, options, col):
+    time_col = col.selectbox(f'Select the {user_time} column -', options)
+    time_col = [time_col]
+    return time_col
+
+def get_mutiple_cols(df, col1, col2):
+    # user_times = col1.multiselect('Select the columns/information you have - ', ['Day', 'Month', 'Year'])
+    col1.write("Select the date/time you have in your data -")
+    day_check = col1.checkbox('Day')
+    month_check = col1.checkbox('Month')
+    year_check = col1.checkbox('Year')
+    col_options = ['~ Select a column ~']
+    df_columns = list(df.columns)
+    col_options = col_options + df_columns
+    selected_columns = []
+    if day_check:
+        selected_column = get_time_cols('Day', col_options, col2)
+        selected_columns = selected_columns + selected_column
+    if month_check:
+        selected_column = get_time_cols('Month', col_options, col2)
+        selected_columns = selected_columns + selected_column
+    if year_check:
+        selected_column = get_time_cols('Year', col_options, col2)
+        selected_columns = selected_columns + selected_column
+    return selected_columns
+    
 
 # Plot pacf and acf plots
 def plot_autocorrelation(df, n):
@@ -239,7 +324,6 @@ def hyperparameter_tuning(S, p_range=3, q_range=3, P_range=3, Q_range=3, d=1):
                         columns=['p', 'q', 'P', 'Q', 'AIC', 'BIC'])
     order_df = order_df.sort_values('AIC').reset_index(drop=True)
 
-
 def user_page():
     st.title("User Basic Page")
     st.write(" ")
@@ -260,19 +344,7 @@ def user_page():
              Officiis eligendi itaque labore et dolorum mollitia officiis optio vero. Quisquam sunt adipisci omnis et ut. Nulla accusantium dolor incidunt officia tempore. Et eius omnis. Cupiditate ut dicta maxime officiis quidem quia. Sed et consectetur qui quia repellendus itaque neque. Aliquid amet quidem ut quaerat cupiditate. Ab et eum qui repellendus omnis culpa magni laudantium dolores.
              """)
     
-    st.sidebar.write('---')
-    # Select Box to ask for input - 
-    input_preference = st.sidebar.selectbox("Input file", ["~ Select ~", "Input from Computer", "Use Example file"])
-    
-    user_data = 2
-    if input_preference == "Input from Computer":
-        uploaded_file = st.sidebar.file_uploader('Upload your input CSV file', type = ['csv'])
-        if uploaded_file is not None:
-            input_df = pd.read_csv(uploaded_file)
-            user_data = 1
-    elif input_preference == "Use Example file":
-        input_df = pd.read_csv('dom_citypairs_web.csv')
-        user_data = 0
+    input_preference, user_data, input_df = get_user_data()
         
     if input_preference != "~ Select ~" and user_data != 2:
         if input_df is not None:
@@ -293,41 +365,26 @@ def user_page():
                      """)
             
             col1, col2, col3 = st.beta_columns((1,4,1))
-            
-            if user_data == 1:
-                col_options = ['~ Select a column ~']
-                df_columns = list(input_df.columns)
-                col_options = col_options + df_columns
-                tsa_column = col2.selectbox('Choose the column containing time-series data', col_options, index = 0)
-            elif user_data == 0:
-                tsa_column = col2.selectbox('Choose the column containing time-series data', ['Passenger_Trips'], index = 0)
-                col2. write("""
-                            ** We will be doing Time-Series Analysis on the 'Passenger_Trips' column.**
-                            """)
+            tsa_column = get_tsa_column(user_data, input_df, col2)
             
             if tsa_column != "~ Select a column ~":
+                
                 st.write(" ")
                 st.write("""
                          Now that we have selected the time_series data column, let's select the column containing our date-time info.  
                          It's normal that sometimes, we have time information in a single column or in different columns.  
                          """)
-                
+                         
                 col1, col2, col3 = st.beta_columns((1,4,1))
+                time_col_pref = get_time_col_pref(user_data, col2)
                 
-                if user_data == 1:
-                    time_col_pref = col2.selectbox('Time data is available in - ', ['~ Select ~', 'Single column', 'Multiple columns'], index = 0)
-                elif user_data == 0:
-                    time_col_pref = col2.selectbox('Time data is available in - ', ['Multiple columns'], index = 0)
-                    col2. write("""
-                                ** In the input file we have time data in different columns.**
-                                """)
                 if time_col_pref != "~ Select ~":
-                    col1, col2, col3 = st.beta_columns((1,4,1))
-                
-                
+                    
+                    date_freq, date_columns = get_date_time(time_col_pref, input_df, user_data)
+                    st.write(date_freq, date_columns)
+                    
                 else:
                     col2.info("Select an option to get time data")
-                
             else:
                 col2.info("Select the column for Time Series Analysis")
             
