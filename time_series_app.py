@@ -205,7 +205,7 @@ def adfuller(df):
     
 # Hyperparameter tuning
     
-def hyperparameter_tuning(p_range=3, q_range=3, P_range=3, Q_range=3, d=1, S):
+def hyperparameter_tuning(S, p_range=3, q_range=3, P_range=3, Q_range=3, d=1):
     order_aic_bic = []
     # Loop over p values from 0-2
     for p in range(p_range):
